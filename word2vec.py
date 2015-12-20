@@ -66,6 +66,7 @@ import heapq
 import time
 from copy import deepcopy
 import threading
+import codecs
 try:
     from queue import Queue
 except ImportError:
@@ -83,16 +84,30 @@ from six import iteritems, itervalues, string_types
 from six.moves import xrange
 
 
+#sys.stdout = codecs.EncodedFile(sys.stdout, 'utf-8')
+#sys.stdout = codecs.getwriter('utf_8')(sys.stdout)  
+
+
 try:
     from gensim_addons.models.word2vec_inner import train_sentence_sg, train_sentence_cbow, FAST_VERSION
 except ImportError:
     try:
         # try to compile and use the faster cython version
-        import pyximport
+        import pyximport; pyximport.install()
+        print 0
         models_dir = os.path.dirname(__file__) or os.getcwd()
+        print 1
         pyximport.install(setup_args={"include_dirs": [models_dir, get_include()]})
-        from word2vec_inner import train_sentence_sg, train_sentence_cbow, FAST_VERSION
+        print 2
+        from word2vec_inner import train_sentence_sg
+        print 3
+        from word2vec_inner import train_sentence_cbow
+        print 4
+        from word2vec_inner import FAST_VERSION
+        print 5
+
     except:
+        print sys.exc_info()[0]
         # failed... fall back to plain numpy (20-80x slower training than the above)
         FAST_VERSION = -1
 
@@ -114,7 +129,7 @@ except ImportError:
 
             for pos, word in enumerate(sentence):
                 if word is None:
-                    continue  # OOV word in the input sentence => skip
+                    continue  # OOV word (Out-of-Vocablary) in the input sentence => skip 
                 reduced_window = random.randint(model.window)  # `b` in the original word2vec code
 
                 # now go over all words from the (reduced) window, predicting each one in turn
@@ -124,7 +139,6 @@ except ImportError:
                     if word2 and not (pos2 == pos):
                         l1 = model.syn0[word2.index]
                         neu1e = zeros(l1.shape)
-
                         if model.hs:
                             # work on the entire tree at once, to push as much work into numpy's C routines as possible (performance)
                             l2a = deepcopy(model.syn1[word.point])  # 2d matrix, codelen x layer1_size
@@ -203,6 +217,9 @@ except ImportError:
             return len([word for word in sentence if word is not None])
 
 
+#######################################################################################
+
+
 class Vocab(object):
     """A single vocabulary item, used internally for constructing binary trees (incl. both word leaves and inner nodes)."""
     def __init__(self, **kwargs):
@@ -215,6 +232,11 @@ class Vocab(object):
     def __str__(self):
         vals = ['%s:%r' % (key, self.__dict__[key]) for key in sorted(self.__dict__) if not key.startswith('_')]
         return "<" + ', '.join(vals) + ">"
+
+
+
+#######################################################################################
+
 
 
 class Word2Vec(utils.SaveLoad):
@@ -271,6 +293,7 @@ class Word2Vec(utils.SaveLoad):
         self.hs = hs
         self.negative = negative
         self.cbow_mean = int(cbow_mean)
+
         if sentences is not None:
             self.build_vocab(sentences)
             self.train(sentences)
@@ -317,6 +340,8 @@ class Word2Vec(utils.SaveLoad):
         # build the huffman tree
         heap = list(itervalues(self.vocab))
         heapq.heapify(heap)
+
+        #ヒープを統合して二分木を作る
         for i in xrange(len(self.vocab) - 1):
             min1, min2 = heapq.heappop(heap), heapq.heappop(heap)
             heapq.heappush(heap, Vocab(count=min1.count + min2.count, index=i + len(self.vocab), left=min1, right=min2))
@@ -504,7 +529,8 @@ class Word2Vec(utils.SaveLoad):
 
 
     @classmethod
-    def load_word2vec_format(cls, fname, fvocab=None, binary=False, norm_only=True):
+    #def load_word2vec_format(cls, fname, fvocab=None, binary=False, norm_only=True):
+    def load_word2vec_format(self, fname, fvocab=None, binary=False, norm_only=True):
         """
         Load the input-hidden weight matrix from the original C word2vec-tool format.
 
