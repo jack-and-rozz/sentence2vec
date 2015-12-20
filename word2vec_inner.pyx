@@ -17,7 +17,8 @@ from libc.string cimport memset
 cdef extern from "voidptr.h":
     void* PyCObject_AsVoidPtr(object obj)
 
-from scipy.linalg.blas import fblas
+#from scipy.linalg.blas import fblas
+import scipy.linalg.blas as fblas
 
 REAL = np.float32
 ctypedef np.float32_t REAL_t
