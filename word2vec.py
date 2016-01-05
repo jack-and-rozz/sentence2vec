@@ -84,7 +84,7 @@ from six import iteritems, itervalues, string_types
 from six.moves import xrange
 
 
-#sys.stdout = codecs.EncodedFile(sys.stdout, 'utf-8')
+sys.stdout = codecs.EncodedFile(sys.stdout, 'utf-8')
 #sys.stdout = codecs.getwriter('utf_8')(sys.stdout)  
 
 
@@ -94,18 +94,12 @@ except ImportError:
     try:
         # try to compile and use the faster cython version
         import pyximport; pyximport.install()
-        print 0
         models_dir = os.path.dirname(__file__) or os.getcwd()
-        print 1
         pyximport.install(setup_args={"include_dirs": [models_dir, get_include()]})
-        print 2
         from word2vec_inner import train_sentence_sg
-        print 3
         from word2vec_inner import train_sentence_cbow
-        print 4
         from word2vec_inner import FAST_VERSION
-        print 5
-
+    
     except:
         print sys.exc_info()[0]
         # failed... fall back to plain numpy (20-80x slower training than the above)
@@ -594,6 +588,7 @@ class Word2Vec(utils.SaveLoad):
                         result.vocab[word] = Vocab(index=line_no, count=None)
                     result.index2word.append(word)
                     result.syn0[line_no] = weights
+
         logger.info("loaded %s matrix from %s" % (result.syn0.shape, fname))
         result.init_sims(norm_only)
         return result
@@ -820,8 +815,12 @@ class Sent2Vec(utils.SaveLoad):
         self.iteration = iteration
 
         if model_file and sentences:
+            logger.info("found w2v model file")
+       
             self.w2v = Word2Vec.load(model_file)
+            print self.w2v
             self.vocab = self.w2v.vocab
+
             self.layer1_size = self.w2v.layer1_size
             self.reset_sent_vec(sentences)
             for i in range(iteration):
