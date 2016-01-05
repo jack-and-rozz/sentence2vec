@@ -1,5 +1,6 @@
-#!/usr/bin/env python
+# coding: utf-8
 # -*- coding: utf-8 -*-
+#!/usr/bin/env python
 #
 # Copyright (C) 2013 Radim Rehurek <me@radimrehurek.com>
 # Licensed under the GNU LGPL v2.1 - http://www.gnu.org/licenses/lgpl.html
@@ -87,6 +88,7 @@ from six.moves import xrange
 sys.stdout = codecs.EncodedFile(sys.stdout, 'utf-8')
 #sys.stdout = codecs.getwriter('utf_8')(sys.stdout)  
 
+SYMBLANK = ' ' #何故か前処理で弾けない空白記号
 
 try:
     from gensim_addons.models.word2vec_inner import train_sentence_sg, train_sentence_cbow, FAST_VERSION
@@ -543,7 +545,27 @@ class Word2Vec(utils.SaveLoad):
             counts = {}
             with utils.smart_open(fvocab) as fin:
                 for line in fin:
-                    word, count = utils.to_unicode(line).strip().split()
+                    # 何らかの空白記号が混ざっている場合はエラーを起こす
+                    res = utils.to_unicode(line).strip().split()
+                    #print line
+                    
+                    if len(res) == 2:
+                        word, count = res[0],res[1]
+                    elif len(res) == 1:
+                        # 前処理で弾ききれない空白記号はSYMBLANKに
+                        word, count = SYMBLANK, res[0]
+                    else:
+                        word, count = reduce(lambda a,b: a+b,res[0:len(res)-1]), res[len(res)-1]
+                        print 'word from multiple tokens', word.encode('utf-8'), count.encode('utf-8')
+                        
+                    
+                    """
+                    print '-----------------'
+                    print 'line', line
+                    print 'res', res
+                    print 'word', word.encode('utf-8')
+                    print 'count', count.encode('utf-8')
+                    """
                     counts[word] = int(count)
 
         logger.info("loading projection weights from %s" % (fname))
@@ -564,6 +586,7 @@ class Word2Vec(utils.SaveLoad):
                         if ch != b'\n':  # ignore newlines in front of words (some binary files have newline, some don't)
                             word.append(ch)
                     word = utils.to_unicode(b''.join(word))
+                    p
                     if counts is None:
                         result.vocab[word] = Vocab(index=line_no, count=vocab_size - line_no)
                     elif word in counts:
@@ -577,14 +600,30 @@ class Word2Vec(utils.SaveLoad):
                 for line_no, line in enumerate(fin):
                     parts = utils.to_unicode(line).split()
                     if len(parts) != layer1_size + 1:
-                        raise ValueError("invalid vector on line %s (is this really the text format?)" % (line_no))
-                    word, weights = parts[0], map(REAL, parts[1:])
+                        # 顔文字のトークンの間に空白記号が混じったりして単語の分割が上手く行かない可能性がある
+                        if len(parts) == layer1_size:
+                            parts.insert(0, SYMBLANK)
+                        # 顔文字が分割されてしまって複数文字の単語になっている場合
+                        elif len(parts) > layer1_size + 1:
+                            word_len = len(parts) - layer1_size
+                            parts = [reduce(lambda a,b: a+b,parts[0:word_len])] + parts[word_len:]
+
+                        else:
+                            raise ValueError("invalid vector on line %s (is this really the text format?)" % (line_no))                        
+                    try:
+                        word, weights = parts[0], map(REAL, parts[1:])
+                    except UnicodeEncodeError:
+                        print 'parts', parts
+                        print 'word' ,word.encode('utf-8')
+                        print 'weights', weights
+                        exit(1)
                     if counts is None:
                         result.vocab[word] = Vocab(index=line_no, count=vocab_size - line_no)
                     elif word in counts:
                         result.vocab[word] = Vocab(index=line_no, count=counts[word])
                     else:
                         logger.warning("vocabulary file is incomplete")
+                        print word.encode('utf-8')
                         result.vocab[word] = Vocab(index=line_no, count=None)
                     result.index2word.append(word)
                     result.syn0[line_no] = weights
@@ -818,7 +857,7 @@ class Sent2Vec(utils.SaveLoad):
             logger.info("found w2v model file")
        
             self.w2v = Word2Vec.load(model_file)
-            print self.w2v
+            #print self.w2v
             self.vocab = self.w2v.vocab
 
             self.layer1_size = self.w2v.layer1_size
