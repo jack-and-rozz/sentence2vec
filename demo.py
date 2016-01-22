@@ -15,7 +15,7 @@ from word2vec import Word2Vec, Sent2Vec, LineSentence
 logging.basicConfig(format='%(asctime)s : %(threadName)s : %(levelname)s : %(message)s', level=logging.INFO)
 logging.info("running %s" % " ".join(sys.argv))
 
-DIR = 'w2vdata/'
+DIR = 'data/'
 
 wordvec_file = DIR + 'jtest.lemma'
 #model = Word2Vec(LineSentence(wordvec_file), size=100, window=5, sg=1, min_count=1, workers=8)

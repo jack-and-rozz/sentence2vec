@@ -1,4 +1,3 @@
-# coding: utf-8
 # -*- coding: utf-8 -*-
 #!/usr/bin/env python
 #
@@ -86,7 +85,6 @@ from six.moves import xrange
 
 
 sys.stdout = codecs.EncodedFile(sys.stdout, 'utf-8')
-#sys.stdout = codecs.getwriter('utf_8')(sys.stdout)  
 
 SYMBLANK = ' ' #何故か前処理で弾けない空白記号
 
@@ -546,18 +544,17 @@ class Word2Vec(utils.SaveLoad):
             with utils.smart_open(fvocab) as fin:
                 for line in fin:
                     # 何らかの空白記号が混ざっている場合はエラーを起こす
-                    res = utils.to_unicode(line).strip().split()
+                    #print '--------'
                     #print line
-                    
+                    res = utils.to_unicode(line, errors='ignore').strip().split()
                     if len(res) == 2:
-                        word, count = res[0],res[1]
+                        word, count = res[0], res[1]
                     elif len(res) == 1:
                         # 前処理で弾ききれない空白記号はSYMBLANKに
                         word, count = SYMBLANK, res[0]
                     else:
                         word, count = reduce(lambda a,b: a+b,res[0:len(res)-1]), res[len(res)-1]
                         print 'word from multiple tokens', word.encode('utf-8'), count.encode('utf-8')
-                        
                     
                     """
                     print '-----------------'
@@ -598,7 +595,7 @@ class Word2Vec(utils.SaveLoad):
                     result.syn0[line_no] = fromstring(fin.read(binary_len), dtype=REAL)
             else:
                 for line_no, line in enumerate(fin):
-                    parts = utils.to_unicode(line).split()
+                    parts = utils.to_unicode(line, errors='ignore').split()
                     if len(parts) != layer1_size + 1:
                         # 顔文字のトークンの間に空白記号が混じったりして単語の分割が上手く行かない可能性がある
                         if len(parts) == layer1_size:
